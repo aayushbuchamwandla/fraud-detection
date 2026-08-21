@@ -1,0 +1,13 @@
+services:
+  fraud-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - FRAUD_API_ENGINE=cpu
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3

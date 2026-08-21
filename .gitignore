@@ -9,6 +9,7 @@ Thumbs.db
 # Env
 .env
 .venv/
+.venv-gpu/
 venv/
 __pycache__/
 node_modules/

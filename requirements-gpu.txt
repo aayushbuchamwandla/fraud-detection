@@ -1,0 +1,15 @@
+# GPU environment (.venv-gpu, Python 3.10) -- see README "Environment notes"
+# for why this is a separate stack from requirements.txt (.venv, Python 3.13).
+#
+# The installed NVIDIA driver (471.41) caps CUDA at 11.4, which predates the
+# CUDA 12.x builds current PyTorch requires. torch==1.12.1+cu113 is the
+# newest well-supported build whose CUDA 11.3 runtime is covered by the
+# driver's 11.4 ceiling under NVIDIA's CUDA-11-series minor-version
+# compatibility guarantee. Install with:
+#
+#   py -3.10 -m venv .venv-gpu
+#   .venv-gpu\Scripts\pip install -r requirements-gpu.txt --index-url https://download.pytorch.org/whl/cu113 --extra-index-url https://pypi.org/simple
+
+torch==1.12.1+cu113
+numpy<2
+pytest

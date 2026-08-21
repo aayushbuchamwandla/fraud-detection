@@ -34,6 +34,7 @@ TENSOR_NAMES = {
 
 def main() -> None:
     weights_path = CHECKPOINT_DIR / "fraud_mlp.pt"
+    config_path = CHECKPOINT_DIR / "fraud_mlp_config.json"
     if not weights_path.exists():
         raise FileNotFoundError(f"{weights_path} not found. Run `python -m src.models.train` first.")
 
@@ -51,6 +52,17 @@ def main() -> None:
 
     with open(EXPORT_DIR / "shapes.json", "w") as f:
         json.dump(shapes, f, indent=2)
+
+    # Plain-text threshold file (not JSON) so the C++ component doesn't need
+    # a JSON library just to read one float.
+    if config_path.exists():
+        with open(config_path) as f:
+            threshold = json.load(f).get("decision_threshold", 0.5)
+    else:
+        threshold = 0.5
+    with open(EXPORT_DIR / "threshold.txt", "w") as f:
+        f.write(f"{threshold}\n")
+    print(f"decision_threshold -> threshold.txt = {threshold}")
 
     print(f"\nExported to {EXPORT_DIR}")
 

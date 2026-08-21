@@ -1,0 +1,5 @@
+# Shell scripts must keep LF line endings regardless of the checkout
+# platform's autocrlf setting -- CRLF in a script run via WSL/Linux bash
+# breaks execution (this repo is developed on Windows but every .sh here
+# is meant to run inside WSL2).
+*.sh text eol=lf

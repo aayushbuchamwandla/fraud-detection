@@ -13,6 +13,10 @@ This works because WSL2 is a real Linux kernel, not a compatibility layer — `d
 
 `docker-compose` (v1, from `apt install docker-compose`) also works the same way — `docker-compose-plugin` (v2) isn't in Ubuntu 22.04's default apt sources, so v1 was used instead. Functionally equivalent for this project's single-service `docker-compose.yml`.
 
+## A real bug this testing caught
+
+The first build/run of the image (before the web frontend was added) worked correctly. After adding the frontend and its `GET /samples` endpoint, actually testing the container (not just rebuilding and assuming) showed `/samples` returning `[]` — the Dockerfile copied `src/` and `frontend/` but not `data/samples/`, so the sample-transaction CSV simply wasn't in the image. Fixed by adding `COPY data/samples/ data/samples/`, rebuilt, and reverified the endpoint returns the real 10 labeled transactions. Left in this doc as a concrete example of why every phase in this project gets actually run, not just written and assumed correct.
+
 ## What's containerized
 
 Only the REST API (Phase 9), serving with the **CPU engine** — consistent with that phase's own data-driven default (CPU measured fastest at batch_size=1). The `Dockerfile` is deliberately lean: it installs only what `src/api/server.py` and `src/inference/cpu_inference.py` actually import at runtime (`torch` CPU wheel, `fastapi`, `uvicorn`), not the full `requirements.txt` (which includes `pandas`/`scipy`/`scikit-learn` for training/preprocessing — irrelevant to serving).

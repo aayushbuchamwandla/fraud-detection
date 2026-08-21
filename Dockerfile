@@ -16,8 +16,15 @@ WORKDIR /app
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir fastapi "uvicorn[standard]"
 
-# Application code
+# Application code + web demo frontend (served by the API itself, see
+# src/api/server.py's StaticFiles mount)
 COPY src/ src/
+COPY frontend/ frontend/
+
+# Real sample transactions for the GET /samples endpoint (used by the
+# frontend's "Load Example" buttons) -- without this the endpoint returns
+# an empty list and the demo buttons silently have nothing to load.
+COPY data/samples/ data/samples/
 
 # Trained model checkpoint -- NOT committed to git (see .gitignore), so this
 # COPY requires `python -m src.models.train` to have been run in the build

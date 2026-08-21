@@ -90,6 +90,51 @@ def test_predict_malformed_json_returns_422(client):
     assert response.status_code == 422
 
 
+def test_feature_names_endpoint(client):
+    response = client.get("/feature-names")
+    assert response.status_code == 200
+    names = response.json()["feature_names"]
+    assert len(names) == 29
+    assert names[0] == "V1"
+    assert names[-1] == "Amount"
+
+
+@pytest.mark.skipif(not HAS_SAMPLES, reason="Requires data/samples/sample_transactions.csv")
+def test_samples_endpoint_returns_real_labeled_data(client):
+    response = client.get("/samples")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 10
+    assert all(len(row["features"]) == 29 for row in data)
+    assert any(row["true_label"] == 1 for row in data)
+    assert any(row["true_label"] == 0 for row in data)
+
+
+def test_frontend_served_at_root(client):
+    """The web demo page is served by the same API it calls -- verifies it's
+    actually reachable, not that it's decorative."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "GPU-Accelerated Fraud Detection" in response.text
+
+
+@pytest.mark.skipif(not HAS_SAMPLES, reason="Requires data/samples/sample_transactions.csv")
+def test_full_frontend_flow_sample_to_prediction(client):
+    """Exercises the exact sequence the web page's JS performs when a user
+    clicks 'Load Fraud Example' then 'Run Inference': GET /samples, pick a
+    fraud row, POST its real features to /predict. No fabricated values
+    anywhere in this path."""
+    samples = client.get("/samples").json()
+    fraud_sample = next(s for s in samples if s["true_label"] == 1)
+
+    response = client.post("/predict", json={"features": fraud_sample["features"]})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["is_fraud"] is True
+    assert body["fraud_probability"] > 0.5
+
+
 @pytest.mark.skipif(not HAS_SAMPLES, reason="Requires data/samples/sample_transactions.csv")
 def test_predict_real_sample_transactions_all_correct(client):
     """Same real, labeled fixtures used by the C++ (Phase 7) and TensorRT

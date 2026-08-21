@@ -16,6 +16,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import csv
 import logging
 import os
 import time
@@ -23,6 +24,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +32,9 @@ logger = logging.getLogger("fraud_api")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INPUT_DIM = 29
+FEATURE_NAMES = [f"V{i}" for i in range(1, 29)] + ["Amount"]
+SAMPLES_PATH = PROJECT_ROOT / "data" / "samples" / "sample_transactions.csv"
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 VALID_ENGINES = ["cpu", "pytorch_gpu", "custom_cuda", "tensorrt"]
 
@@ -57,6 +62,34 @@ class HealthResponse(BaseModel):
     engine: str
     model_loaded: bool
     decision_threshold: float
+
+
+class SampleTransaction(BaseModel):
+    test_split_index: int
+    true_label: int
+    features: list[float]
+
+
+def _load_sample_transactions() -> list[SampleTransaction]:
+    """Reads the REAL held-out test-split transactions exported by
+    scripts/export_sample_transactions.py (see Phase 7) -- the web frontend's
+    "Load Legitimate/Fraud Example" buttons call this via GET /samples rather
+    than embedding fixture data client-side, so even the example values shown
+    are round-tripped through the real backend.
+    """
+    if not SAMPLES_PATH.exists():
+        return []
+    with open(SAMPLES_PATH) as f:
+        reader = csv.reader(f)
+        next(reader)  # header
+        return [
+            SampleTransaction(
+                test_split_index=int(row[0]),
+                true_label=int(row[1]),
+                features=[float(v) for v in row[2:]],
+            )
+            for row in reader
+        ]
 
 
 def _load_predictor(engine: str):
@@ -139,9 +172,23 @@ def create_app() -> FastAPI:
             latency_ms=round(latency_ms, 4),
         )
 
+    @app.get("/samples", response_model=list[SampleTransaction])
+    def samples() -> list[SampleTransaction]:
+        return _load_sample_transactions()
+
+    @app.get("/feature-names")
+    def feature_names() -> dict:
+        return {"feature_names": FEATURE_NAMES}
+
     @app.exception_handler(ValueError)
     def value_error_handler(request, exc: ValueError):  # noqa: ANN001
         return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+    # Serve the web demo frontend (frontend/index.html + assets) as static
+    # files at "/". It calls /health, /samples, and /predict via fetch() --
+    # no prediction values are computed or hardcoded client-side.
+    if FRONTEND_DIR.exists():
+        app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 
     return app
 

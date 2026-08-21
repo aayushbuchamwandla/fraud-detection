@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GPU-Accelerated Fraud Detection</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e38;
+    --text: #e8eaed;
+    --muted: #9aa1ab;
+    --accent: #4f8cff;
+    --danger: #ff5c5c;
+    --safe: #3ecf8e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .status-bar {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; font-size: 13px;
+  }
+  .status-bar span b { color: var(--text); }
+  .status-bar span { color: var(--muted); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .dot.ok { background: var(--safe); }
+  .dot.err { background: var(--danger); }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px; margin-bottom: 18px;
+  }
+  .panel h2 { font-size: 14px; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .btn-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  button {
+    background: #232733; color: var(--text); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { background: #2c3140; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { background: #3d7ae0; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .feature-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px; margin-bottom: 6px;
+  }
+  .feature-cell label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 2px; }
+  .feature-cell input {
+    width: 100%; background: #0d0f13; border: 1px solid var(--border); color: var(--text);
+    border-radius: 4px; padding: 5px 6px; font-size: 12px; font-family: monospace;
+  }
+  .feature-note { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  .result-panel { min-height: 140px; }
+  .result-empty { color: var(--muted); font-size: 13px; }
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+  .result-item .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .result-item .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .value.fraud { color: var(--danger); }
+  .value.legit { color: var(--safe); }
+  .error-box { color: var(--danger); font-size: 13px; padding: 10px; border: 1px solid var(--danger); border-radius: 6px; }
+
+  a { color: var(--accent); }
+  footer { color: var(--muted); font-size: 11px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>GPU-Accelerated Fraud Detection</h1>
+  <div class="subtitle">
+    Every value on this page is fetched from the running API in real time -- sample transactions come from
+    <code>GET /samples</code> (real held-out test-set rows), predictions from <code>POST /predict</code>
+    (the real trained model), nothing is computed or faked in this page's JavaScript.
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    <span><span class="dot" id="status-dot"></span><b id="status-text">connecting...</b></span>
+    <span>Engine: <b id="status-engine">-</b></span>
+    <span>Decision threshold: <b id="status-threshold">-</b></span>
+  </div>
+
+  <div class="panel">
+    <h2>Transaction features</h2>
+    <div class="btn-row">
+      <button id="btn-legit">Load Legitimate Example</button>
+      <button id="btn-fraud">Load Fraud Example</button>
+      <button id="btn-clear">Clear</button>
+    </div>
+    <div class="feature-grid" id="feature-grid"></div>
+    <div class="feature-note">
+      V1-V28 are PCA-transformed, anonymized components from the original ULB credit-card dataset (not
+      human-readable categories like merchant/location -- that's the real feature space this model was
+      trained on). Amount is the only raw feature.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Inference</h2>
+    <div class="btn-row">
+      <button class="primary" id="btn-predict">Run Inference</button>
+    </div>
+    <div class="result-panel" id="result-panel">
+      <div class="result-empty">Load an example or enter feature values, then run inference.</div>
+    </div>
+  </div>
+
+  <footer>
+    Endpoints called by this page: <code>GET /health</code>, <code>GET /samples</code>,
+    <code>GET /feature-names</code>, <code>POST /predict</code>. Source:
+    <a href="https://github.com/aayushbuchamwandla/fraud-detection" target="_blank">github.com/aayushbuchamwandla/fraud-detection</a>
+  </footer>
+</div>
+
+<script>
+const API = "";  // same-origin -- the frontend is served BY the API (see src/api/server.py)
+
+let featureNames = [];
+let samples = [];
+
+async function fetchJSON(path, options) {
+  const res = await fetch(API + path, options);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail ? JSON.stringify(body.detail) : `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+function buildFeatureGrid() {
+  const grid = document.getElementById("feature-grid");
+  grid.innerHTML = "";
+  featureNames.forEach((name, i) => {
+    const cell = document.createElement("div");
+    cell.className = "feature-cell";
+    cell.innerHTML = `<label>${name}</label><input type="number" step="any" id="feat-${i}" value="0">`;
+    grid.appendChild(cell);
+  });
+}
+
+function getFeatureValues() {
+  return featureNames.map((_, i) => parseFloat(document.getElementById(`feat-${i}`).value) || 0);
+}
+
+function setFeatureValues(values) {
+  values.forEach((v, i) => {
+    const el = document.getElementById(`feat-${i}`);
+    if (el) el.value = v;
+  });
+}
+
+async function loadStatus() {
+  try {
+    const health = await fetchJSON("/health");
+    document.getElementById("status-dot").className = "dot ok";
+    document.getElementById("status-text").textContent = health.status;
+    document.getElementById("status-engine").textContent = health.engine;
+    document.getElementById("status-threshold").textContent = health.decision_threshold.toFixed(4);
+  } catch (e) {
+    document.getElementById("status-dot").className = "dot err";
+    document.getElementById("status-text").textContent = "API unreachable: " + e.message;
+  }
+}
+
+async function loadFeatureNames() {
+  const data = await fetchJSON("/feature-names");
+  featureNames = data.feature_names;
+  buildFeatureGrid();
+}
+
+async function loadSamplesOnce() {
+  if (samples.length === 0) {
+    samples = await fetchJSON("/samples");
+  }
+  return samples;
+}
+
+async function loadExample(label) {
+  const all = await loadSamplesOnce();
+  const matching = all.filter((s) => s.true_label === label);
+  if (matching.length === 0) {
+    alert("No sample transactions available -- run scripts/export_sample_transactions.py first.");
+    return;
+  }
+  const pick = matching[Math.floor(Math.random() * matching.length)];
+  setFeatureValues(pick.features);
+  document.getElementById("result-panel").innerHTML =
+    `<div class="result-empty">Loaded real test-split transaction #${pick.test_split_index} ` +
+    `(true label: ${pick.true_label ? "FRAUD" : "legitimate"}). Click "Run Inference" to see the model's prediction.</div>`;
+}
+
+async function runInference() {
+  const btn = document.getElementById("btn-predict");
+  btn.disabled = true;
+  const panel = document.getElementById("result-panel");
+  panel.innerHTML = `<div class="result-empty">Running inference...</div>`;
+  try {
+    const features = getFeatureValues();
+    const result = await fetchJSON("/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ features }),
+    });
+    const cls = result.is_fraud ? "fraud" : "legit";
+    panel.innerHTML = `
+      <div class="result-grid">
+        <div class="result-item"><div class="label">Prediction</div>
+          <div class="value ${cls}">${result.is_fraud ? "FRAUD" : "LEGITIMATE"}</div></div>
+        <div class="result-item"><div class="label">Fraud probability</div>
+          <div class="value">${(result.fraud_probability * 100).toFixed(4)}%</div></div>
+        <div class="result-item"><div class="label">Engine</div>
+          <div class="value">${result.engine}</div></div>
+        <div class="result-item"><div class="label">Latency</div>
+          <div class="value">${result.latency_ms.toFixed(3)} ms</div></div>
+      </div>`;
+  } catch (e) {
+    panel.innerHTML = `<div class="error-box">Request failed: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById("btn-legit").addEventListener("click", () => loadExample(0));
+document.getElementById("btn-fraud").addEventListener("click", () => loadExample(1));
+document.getElementById("btn-clear").addEventListener("click", () => setFeatureValues(featureNames.map(() => 0)));
+document.getElementById("btn-predict").addEventListener("click", runInference);
+
+loadStatus();
+loadFeatureNames();
+</script>
+</body>
+</html>

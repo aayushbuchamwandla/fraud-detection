@@ -11,9 +11,10 @@ torch
 # Testing
 pytest
 
-# API (added in Phase 9)
-# fastapi
-# uvicorn
+# API (Phase 9)
+fastapi
+uvicorn[standard]
+httpx  # required by fastapi.testclient
 
 # Plotting (added in Phase 12)
 # matplotlib

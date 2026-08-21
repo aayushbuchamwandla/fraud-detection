@@ -1,0 +1,92 @@
+[
+  {
+    "batch_size": 1,
+    "mean_ms": {
+      "host_prep": 0.01647,
+      "h2d_transfer": 0.03534,
+      "gpu_compute": 0.25707,
+      "d2h_transfer": 0.03057,
+      "postprocess": 0.02047
+    },
+    "pct_of_total": {
+      "host_prep": 4.6,
+      "h2d_transfer": 9.8,
+      "gpu_compute": 71.4,
+      "d2h_transfer": 8.5,
+      "postprocess": 5.7
+    },
+    "total_mean_ms": 0.35992
+  },
+  {
+    "batch_size": 32,
+    "mean_ms": {
+      "host_prep": 0.00567,
+      "h2d_transfer": 0.03019,
+      "gpu_compute": 0.20638,
+      "d2h_transfer": 0.02723,
+      "postprocess": 0.01271
+    },
+    "pct_of_total": {
+      "host_prep": 2.0,
+      "h2d_transfer": 10.7,
+      "gpu_compute": 73.1,
+      "d2h_transfer": 9.6,
+      "postprocess": 4.5
+    },
+    "total_mean_ms": 0.28218
+  },
+  {
+    "batch_size": 128,
+    "mean_ms": {
+      "host_prep": 0.00695,
+      "h2d_transfer": 0.0323,
+      "gpu_compute": 0.20555,
+      "d2h_transfer": 0.02715,
+      "postprocess": 0.01284
+    },
+    "pct_of_total": {
+      "host_prep": 2.4,
+      "h2d_transfer": 11.3,
+      "gpu_compute": 72.2,
+      "d2h_transfer": 9.5,
+      "postprocess": 4.5
+    },
+    "total_mean_ms": 0.28479
+  },
+  {
+    "batch_size": 512,
+    "mean_ms": {
+      "host_prep": 0.0084,
+      "h2d_transfer": 0.03694,
+      "gpu_compute": 0.21389,
+      "d2h_transfer": 0.02848,
+      "postprocess": 0.0136
+    },
+    "pct_of_total": {
+      "host_prep": 2.8,
+      "h2d_transfer": 12.3,
+      "gpu_compute": 71.0,
+      "d2h_transfer": 9.5,
+      "postprocess": 4.5
+    },
+    "total_mean_ms": 0.30131
+  },
+  {
+    "batch_size": 1024,
+    "mean_ms": {
+      "host_prep": 0.01147,
+      "h2d_transfer": 0.04437,
+      "gpu_compute": 0.23058,
+      "d2h_transfer": 0.02906,
+      "postprocess": 0.01432
+    },
+    "pct_of_total": {
+      "host_prep": 3.5,
+      "h2d_transfer": 13.5,
+      "gpu_compute": 69.9,
+      "d2h_transfer": 8.8,
+      "postprocess": 4.3
+    },
+    "total_mean_ms": 0.3298
+  }
+]

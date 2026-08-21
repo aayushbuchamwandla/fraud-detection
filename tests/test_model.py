@@ -91,7 +91,13 @@ def test_checkpoint_save_load_roundtrip(tmp_path):
     torch.save(model.state_dict(), ckpt_path)
 
     loaded_model = FraudMLP(ModelConfig(input_dim=29))
-    loaded_model.load_state_dict(torch.load(ckpt_path, weights_only=True))
+    # weights_only kwarg isn't available on torch 1.12 (this project's WSL2
+    # CUDA venv -- see README Environment notes); fall back gracefully.
+    try:
+        state_dict = torch.load(ckpt_path, weights_only=True)
+    except TypeError:
+        state_dict = torch.load(ckpt_path)
+    loaded_model.load_state_dict(state_dict)
     loaded_model.eval()
     with torch.no_grad():
         loaded_output = loaded_model(x)

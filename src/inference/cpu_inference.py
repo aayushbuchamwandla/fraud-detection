@@ -34,7 +34,15 @@ class CPUFraudPredictor:
 
         self.device = torch.device("cpu")
         self.model = FraudMLP(self.config).to(self.device)
-        self.model.load_state_dict(torch.load(weights_path, map_location=self.device, weights_only=True))
+        # weights_only kwarg isn't available on torch 1.12 (this project's
+        # WSL2 CUDA venv -- see README Environment notes); this checkpoint
+        # is just a plain state_dict of tensors regardless of which torch
+        # version wrote or reads it.
+        try:
+            state_dict = torch.load(weights_path, map_location=self.device, weights_only=True)
+        except TypeError:
+            state_dict = torch.load(weights_path, map_location=self.device)
+        self.model.load_state_dict(state_dict)
         self.model.eval()
 
     @staticmethod

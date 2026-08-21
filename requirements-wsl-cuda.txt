@@ -1,0 +1,30 @@
+# WSL2 environment (~/venv-cuda, Python 3.10) -- the complete-stack
+# environment: CUDA, the custom kernel, C++ build tooling, TensorRT, and
+# the API/tests all work together here. See README "Environment notes" for
+# why this is a third environment, separate from .venv and .venv-gpu.
+#
+# Install (inside WSL2, after `python3 -m venv ~/venv-cuda`):
+#   source ~/venv-cuda/bin/activate
+#   pip install torch==1.12.1+cu113 --index-url https://download.pytorch.org/whl/cu113
+#   pip install -r requirements-wsl-cuda.txt
+#   pip install nvidia-cudnn-cu11==8.9.6.50
+#   pip install tensorrt-cu11==10.0.1 --no-build-isolation   # needs `pip install wheel` first
+#
+# (torch/cudnn/tensorrt installed separately above -- see docs/tensorrt.md
+# for why these need non-standard index URLs / flags, not expressible as
+# plain requirements.txt lines)
+
+numpy==1.26.4  # <2 for torch 1.12 ABI compatibility
+scipy
+pandas
+scikit-learn
+
+fastapi
+uvicorn[standard]
+httpx
+
+onnx
+pycuda
+ninja  # required for JIT-compiling the custom CUDA extension (src/inference/custom_cuda.py)
+
+pytest

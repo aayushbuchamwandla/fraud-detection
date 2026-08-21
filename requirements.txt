@@ -1,0 +1,19 @@
+# Core data science
+pandas
+numpy
+scipy
+scikit-learn
+
+# Deep learning (CPU build for Phase 1-3; GPU build installed separately in
+# Phase 4, see README for the WSL2 + CUDA setup instructions)
+torch
+
+# Testing
+pytest
+
+# API (added in Phase 9)
+# fastapi
+# uvicorn
+
+# Plotting (added in Phase 12)
+# matplotlib

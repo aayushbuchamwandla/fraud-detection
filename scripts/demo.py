@@ -6,6 +6,14 @@ real probabilities, and real measured latency. Nothing here is hardcoded;
 which backends run depends on what's actually importable right now (see
 scripts/check_environment.py for the same detection logic).
 
+The output is built around the backend-vs-backend latency comparison, not
+a single endpoint call -- each transaction prints every available backend
+ranked fastest-to-slowest with a text bar chart, and the run ends with an
+aggregate mean-latency summary across all transactions. This is the
+project's actual differentiator (CPU vs GPU vs custom CUDA kernel vs C++
+vs TensorRT on identical inputs) and is meant to be the visual centerpiece
+of a recorded demo, not an afterthought below a REST API call.
+
 Usage:
     python scripts/demo.py
 """
@@ -77,6 +85,14 @@ def get_backends() -> dict:
     return backends
 
 
+def text_bar(value: float, max_value: float, width: int = 30) -> str:
+    """Renders a value as a filled Unicode block bar, scaled against
+    max_value -- makes the latency spread visible at a glance on a terminal
+    recording without needing an external chart."""
+    filled = max(1, round(width * value / max_value)) if max_value > 0 else 0
+    return "█" * filled + "░" * (width - filled)
+
+
 def predict_one(name: str, predictor, features: list[float]) -> tuple[float, bool, float]:
     start = time.perf_counter()
     if name == "tensorrt":
@@ -125,17 +141,55 @@ def main() -> None:
     for name, predictor in backends.items():
         predict_one(name, predictor, warmup_sample)
 
+    all_latencies: dict[str, list[float]] = {name: [] for name in backends}
+
     for sample in samples:
         label_str = "FRAUD" if sample["true_label"] else "LEGITIMATE"
         print(f"\nTransaction (test-split index {sample['idx']}, true label: {label_str})")
+
+        per_backend_results = []
         for name, predictor in backends.items():
             prob, is_fraud, latency_ms = predict_one(name, predictor, sample["features"])
+            per_backend_results.append((name, prob, is_fraud, latency_ms))
+            all_latencies[name].append(latency_ms)
+
+        # Print ranked fastest -> slowest for THIS transaction, with a text
+        # bar so the latency spread across backends is visible at a glance
+        # -- this comparison, not the single-endpoint prediction, is the
+        # actual engineering story of this project.
+        max_latency = max(r[3] for r in per_backend_results)
+        for rank, (name, prob, is_fraud, latency_ms) in enumerate(
+            sorted(per_backend_results, key=lambda r: r[3]), start=1
+        ):
             pred_str = "FRAUD" if is_fraud else "LEGITIMATE"
             correct = "correct" if is_fraud == bool(sample["true_label"]) else "WRONG"
+            bar = text_bar(latency_ms, max_latency)
             print(
-                f"  [{name:12s}] Prediction: {pred_str:12s} Fraud Probability: {prob:.6f}  "
-                f"Latency: {latency_ms:.4f} ms  ({correct})"
+                f"  {rank}. [{name:12s}] {bar} {latency_ms:7.4f} ms  "
+                f"{pred_str:12s} p={prob:.4f}  ({correct})"
             )
+
+    # Aggregate summary across all transactions -- the number that actually
+    # matters for "which backend is fastest," not any single transaction's
+    # result, which can be noisy.
+    print("\n" + "=" * 60)
+    print("SUMMARY: mean latency per backend, across all transactions above")
+    print("=" * 60)
+    means = {name: sum(lats) / len(lats) for name, lats in all_latencies.items() if lats}
+    max_mean = max(means.values())
+    for rank, (name, mean_ms) in enumerate(sorted(means.items(), key=lambda kv: kv[1]), start=1):
+        bar = text_bar(mean_ms, max_mean)
+        print(f"  {rank}. {name:12s} {bar} {mean_ms:7.4f} ms")
+
+    print(
+        "\nNote: these are single live calls (one warm-up + one measured call per\n"
+        "transaction), not the rigorous 200-iteration benchmark -- the relative\n"
+        "order between close backends (e.g. custom CUDA vs TensorRT) can differ\n"
+        "run to run here even though it's stable in the formal benchmark. See\n"
+        "benchmarks/results/ and the README's benchmark tables for the\n"
+        "statistically-controlled comparison this project's conclusions are\n"
+        "actually based on."
+    )
 
     print("\n" + "=" * 60)
     print("Demo complete")

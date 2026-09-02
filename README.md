@@ -334,8 +334,6 @@ uvicorn src.api.server:app --port 8000
 
 ## Demo, environment check, and verification tooling
 
-**[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)** — a timed ~4-minute recording script (recording setup, exact commands, word-for-word narration) for capturing this project as a demo video.
-
 **`scripts/check_environment.py`** — reports what's actually available right now (GPU, PyTorch+CUDA, TensorRT, nvcc, C++ compiler, CMake, Docker), via real subprocess calls and imports, not hardcoded values. Genuinely reports different output on each of this project's three environments — confirmed by running it on both the plain Windows CPU venv and the WSL2 full-stack venv side by side.
 
 **`scripts/demo.py` / `scripts/demo.sh`** — one-command terminal demo: detects available backends, loads the real trained model and real labeled sample transactions, runs one warm-up call per backend (so the first GPU call's one-time CUDA/cuDNN initialization cost — measured at ~4.6 seconds on this machine — doesn't get displayed as if it were the model's real latency), then prints real predictions/probabilities/latency for every available backend on 4 real transactions (2 legitimate, 2 fraud). On WSL2, all 4 backends (CPU, PyTorch GPU, custom CUDA kernel, TensorRT) run side by side — **16/16 correct predictions** in the verified run. On the plain Windows venv it gracefully shows CPU only.

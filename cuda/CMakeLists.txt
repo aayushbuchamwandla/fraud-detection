@@ -1,7 +1,7 @@
 # Standalone CUDA build for the fused FraudMLP kernel -- independent of
 # Python/PyTorch, so the kernel can be verified/benchmarked as a pure
 # C++/CUDA artifact. This is also the library cpp/ (Phase 7) links against,
-# so the actual inference math is defined exactly once.
+# so the inference math is defined exactly once.
 #
 # Build (inside WSL2, with CUDA Toolkit 11.3 + g++-10 -- see README):
 #   cmake -S cuda -B cuda/build -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/g++-10

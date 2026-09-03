@@ -2,11 +2,9 @@
 
 ## Environment resolution
 
-Flagged from the start of this project as the one genuinely uncertain checkpoint. Result: **fully resolved with no manual/browser/account action needed**, though it took real troubleshooting to get there:
-
-1. `pip install tensorrt` (plain package, any version) **installs successfully but bundles CUDA 12.9 runtime libraries regardless of the TensorRT version number** — confirmed by inspecting what `tensorrt_libs==8.6.1` actually pulls (`nvidia-cuda-runtime-cu12`, `nvidia-cudnn-cu12`, `nvidia-cublas-cu12`). Attempting to use it fails at `Builder()` construction with `CUDA initialization failure with error: 35` (`cudaErrorInsufficientDriver`) — a hard wall, not a fixable bug, since our driver's ceiling is CUDA 11.4.
-2. `pip install tensorrt-cu11==10.0.1` (the explicitly CUDA-11-suffixed package) **does resolve to real CUDA 11-compatible sub-wheels** (`tensorrt-cu11-libs`, `tensorrt-cu11-bindings`) and initializes correctly against this driver — verified by actually building and executing a minimal engine end to end (not just constructing a `Builder` object), including a numerically-checked output.
-3. Two packaging potholes along the way, both fixed directly: pip's build isolation strips `pip` itself from the isolated build environment, which broke the metapackage's own internal `pip install` subprocess call (fixed with `--no-build-isolation` + ensuring `wheel` is present); and the installed `nvidia-cudnn-cu12` dependency provided `libcudnn.so.9` while the compiled TensorRT bindings needed `libcudnn.so.8` (fixed by installing `nvidia-cudnn-cu11==8.9.6.50` alongside, which provides the correctly-versioned `.so`).
+1. `pip install tensorrt` (plain package, any version) installs successfully but bundles CUDA 12.9 runtime libraries regardless of the TensorRT version number — confirmed by inspecting what `tensorrt_libs==8.6.1` pulls (`nvidia-cuda-runtime-cu12`, `nvidia-cudnn-cu12`, `nvidia-cublas-cu12`). Using it fails at `Builder()` construction with `CUDA initialization failure with error: 35` (`cudaErrorInsufficientDriver`), since this driver's ceiling is CUDA 11.4.
+2. `pip install tensorrt-cu11==10.0.1` (the CUDA-11-suffixed package) resolves to CUDA-11-compatible sub-wheels (`tensorrt-cu11-libs`, `tensorrt-cu11-bindings`) and initializes correctly against this driver — verified by building and executing a minimal engine end to end (not just constructing a `Builder` object), including a numerically-checked output.
+3. Two packaging issues along the way: pip's build isolation strips `pip` itself from the isolated build environment, which broke the metapackage's own internal `pip install` subprocess call (fixed with `--no-build-isolation` + ensuring `wheel` is present); and the installed `nvidia-cudnn-cu12` dependency provided `libcudnn.so.9` while the compiled TensorRT bindings needed `libcudnn.so.8` (fixed by installing `nvidia-cudnn-cu11==8.9.6.50` alongside, which provides the correctly-versioned `.so`).
 
 See `scripts/wsl_env.sh` for the resulting `PATH`/`LD_LIBRARY_PATH` needed to run any of this.
 
@@ -31,9 +29,9 @@ models/exported/fraud_model.engine
 
 ## Correctness validation
 
-`tests/test_tensorrt.py` — 10 tests: engine loading, output shape/range, numerical agreement against a CPU `FraudMLP` reference across all 5 batch sizes, and **10/10 real held-out labeled transactions classified correctly** (same fixtures as Phase 7's C++ tests). All pass.
+`tests/test_tensorrt.py` — 10 tests: engine loading, output shape/range, numerical agreement against a CPU `FraudMLP` reference across all 5 batch sizes, and **10/10 held-out labeled transactions classified correctly** (same fixtures as Phase 7's C++ tests). All pass.
 
-**On tolerance:** the numerical-agreement tests use `atol=1e-3, rtol=1e-2`, looser than Phase 6/7's `1e-5`/`1e-6`. This is deliberate, not a lowered bar to force a pass: TensorRT is *allowed* to reorder floating-point operations during its own kernel-fusion passes, which changes rounding versus a straightforward PyTorch forward pass. Measured max absolute difference at batch=1024 was ~7e-4 — real, expected TensorRT behavior, and far too small to ever flip a classification decision (the model's decision threshold sits at 0.999, and legitimate/fraud probabilities in the test set are not clustered anywhere near that boundary within 7e-4). A genuinely wrong engine (e.g. a transposed weight) would produce differences orders of magnitude larger than this and still fail the test.
+**On tolerance:** the numerical-agreement tests use `atol=1e-3, rtol=1e-2`, looser than Phase 6/7's `1e-5`/`1e-6`. TensorRT is allowed to reorder floating-point operations during its kernel-fusion passes, which changes rounding versus a straightforward PyTorch forward pass. Measured max absolute difference at batch=1024 was ~7e-4 — expected TensorRT behavior, and far too small to flip a classification decision (the model's decision threshold sits at 0.999, and legitimate/fraud probabilities in the test set aren't clustered near that boundary within 7e-4). An incorrect engine (e.g. a transposed weight) would produce differences orders of magnitude larger than this and still fail the test.
 
 ## Measured performance
 
@@ -49,18 +47,18 @@ Same batch sizes, warm-up (20), measurement count (200) as every other backend.
 
 Raw data: `benchmarks/results/tensorrt_results.json`.
 
-## Honest conclusion: TensorRT is the slowest GPU path in this project, for this model
+## Conclusion: TensorRT is the slowest GPU path for this model
 
-This is a genuinely surprising result and it's reported as measured, not explained away. **TensorRT is slower than the CPU baseline, the custom CUDA kernel, and the C++ path at every single batch size.**
+**TensorRT is slower than the CPU baseline, the custom CUDA kernel, and the C++ path at every batch size tested.**
 
-Before accepting that conclusion, two follow-up checks were run to rule out an unfair comparison:
+Two follow-up checks ruled out an unfair comparison:
 
-1. **Was it the dynamic-shape profile adding overhead?** Built a second, fully *static*-shape engine (min=opt=max=1024, no shape flexibility at all) and benchmarked it directly. Result: 0.183 ms — statistically indistinguishable from the dynamic engine's 0.185 ms. Dynamic shape was not the cause.
-2. **Was the ONNX export/parse doing something wrong?** `onnx.checker` validated the exported graph, and the TensorRT engine's own numerical output matches the CPU reference within the tolerance discussed above — the engine is computing the right thing, just not doing it faster.
+1. **Dynamic-shape profile overhead?** Built a second, fully static-shape engine (min=opt=max=1024, no shape flexibility) and benchmarked it directly. Result: 0.183 ms — statistically indistinguishable from the dynamic engine's 0.185 ms. Dynamic shape was not the cause.
+2. **ONNX export/parse error?** `onnx.checker` validated the exported graph, and the TensorRT engine's numerical output matches the CPU reference within the tolerance discussed above — the engine computes the right thing, just not faster.
 
-**The real explanation:** TensorRT's runtime carries its own fixed per-call overhead — input shape binding/validation, the `execute_async_v3` dispatch through the Python/pycuda bindings, stream synchronization — and for a network this small (4,033 parameters, ~3,936 multiply-adds per sample), that fixed cost is not amortized by TensorRT's kernel-fusion and tensor-core advantages the way it would be for a real production-sized model (millions to billions of parameters), which is what TensorRT is actually built for. The hand-written fused kernel (Phase 6) and the persistent-buffer C++ path (Phase 7) both have less machinery between "call predict()" and "GPU does the math," and for a model this small, that matters more than TensorRT's more sophisticated optimizer.
+**Explanation:** TensorRT's runtime carries its own fixed per-call overhead — input shape binding/validation, the `execute_async_v3` dispatch through the Python/pycuda bindings, stream synchronization — and for a network this small (4,033 parameters, ~3,936 multiply-adds per sample), that fixed cost isn't amortized by TensorRT's kernel-fusion and tensor-core advantages the way it would be for a production-sized model (millions to billions of parameters). The hand-written fused kernel (Phase 6) and the persistent-buffer C++ path (Phase 7) both have less machinery between `predict()` and the GPU doing the math, which matters more than TensorRT's optimizer for a model this small.
 
-This is consistent with, not contradictory to, this project's throughline since Phase 5: GPU acceleration (and here, TensorRT specifically) pays off based on workload size, not because a tool has a more impressive reputation. A 4K-parameter tabular model is the wrong workload to showcase TensorRT's actual strengths — and that's a more honest, more defensible engineering conclusion than a fabricated "TensorRT wins" result would have been.
+GPU acceleration, and TensorRT specifically, pays off based on workload size. A 4K-parameter tabular model isn't representative of the workloads TensorRT is designed for.
 
 ## Reproduction
 

@@ -1,9 +1,8 @@
 """
 Tests for src/api/server.py.
 
-Uses FastAPI's TestClient (no real network/socket needed) and the real
-trained model + real labeled sample transactions (data/samples/sample_transactions.csv),
-not fabricated fixtures.
+Uses FastAPI's TestClient (no network socket needed), the trained model,
+and the labeled sample transactions in data/samples/sample_transactions.csv.
 
 Run with: pytest tests/test_api.py -v
 """
@@ -111,8 +110,7 @@ def test_samples_endpoint_returns_real_labeled_data(client):
 
 
 def test_frontend_served_at_root(client):
-    """The web demo page is served by the same API it calls -- verifies it's
-    actually reachable, not that it's decorative."""
+    """The frontend page is served by the same API it calls."""
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
@@ -121,10 +119,9 @@ def test_frontend_served_at_root(client):
 
 @pytest.mark.skipif(not HAS_SAMPLES, reason="Requires data/samples/sample_transactions.csv")
 def test_full_frontend_flow_sample_to_prediction(client):
-    """Exercises the exact sequence the web page's JS performs when a user
-    clicks 'Load Fraud Example' then 'Run Inference': GET /samples, pick a
-    fraud row, POST its real features to /predict. No fabricated values
-    anywhere in this path."""
+    """Exercises the sequence the web page's JS performs when a user clicks
+    'Load Fraud Example' then 'Run Inference': GET /samples, pick a fraud
+    row, POST its features to /predict."""
     samples = client.get("/samples").json()
     fraud_sample = next(s for s in samples if s["true_label"] == 1)
 
@@ -137,8 +134,8 @@ def test_full_frontend_flow_sample_to_prediction(client):
 
 @pytest.mark.skipif(not HAS_SAMPLES, reason="Requires data/samples/sample_transactions.csv")
 def test_predict_real_sample_transactions_all_correct(client):
-    """Same real, labeled fixtures used by the C++ (Phase 7) and TensorRT
-    (Phase 8) correctness tests -- not synthetic data."""
+    """Same labeled fixtures used by the C++ (Phase 7) and TensorRT
+    (Phase 8) correctness tests."""
     samples = load_sample_transactions()
     assert len(samples) > 0
 

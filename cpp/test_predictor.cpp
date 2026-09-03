@@ -1,8 +1,8 @@
-// Correctness test for the C++ FraudPredictor, using the real trained
-// weights and real labeled transactions (not synthetic data) -- checks
-// that the C++ inference path's classification matches ground truth on
-// the same sample set the demo uses, and that error handling behaves
-// as documented (bad input dimension, missing weights directory).
+// Correctness test for the C++ FraudPredictor, using the trained weights
+// and labeled sample transactions -- checks that the C++ inference path's
+// classification matches ground truth on the same sample set the demo
+// uses, and that error handling behaves as documented (bad input
+// dimension, missing weights directory).
 
 #include "inference.hpp"
 
@@ -82,13 +82,11 @@ int main(int argc, char** argv) {
     }
     expect(threw_missing, "FraudPredictor() with missing weights dir throws std::runtime_error");
 
-    // Real labeled data: check predictions land on the correct side of the
-    // threshold for at least the extreme, unambiguous cases (this mirrors
-    // what Phase 2's test set showed: threshold=0.999 catches most fraud
-    // with some false negatives, so we don't require 100% -- just that the
-    // C++ path's classifications match Python's on the same inputs, which
-    // is tested more rigorously by comparing against the CUDA kernel
-    // correctness tests since both call the identical launch_fraud_mlp_forward).
+    // Threshold=0.999 (see Phase 2) doesn't guarantee 100% on the sample
+    // set, so this checks probability range and classification agreement
+    // rather than requiring every prediction to match ground truth; exact
+    // numerical agreement with the CUDA kernel is covered separately by
+    // the CUDA correctness tests (both call launch_fraud_mlp_forward).
     auto samples = load_samples(samples_csv);
     expect(samples.size() > 0, "sample_transactions.csv loaded at least one row");
 

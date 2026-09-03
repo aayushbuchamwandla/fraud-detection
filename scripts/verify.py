@@ -1,10 +1,8 @@
 """
-Full project verification: actually runs each major component and reports
-[PASS]/[FAIL]/[SKIP] based on what genuinely happened -- not a checklist
-that gets marked done by inspection. [SKIP] means the component's
-dependency isn't available in this environment (e.g. TensorRT on the plain
-Windows CPU venv), which is a legitimate, honestly-reported outcome, not a
-failure. [FAIL] means something that should have worked didn't.
+Runs each major component and reports PASS/FAIL/SKIP. SKIP means the
+component's dependency isn't available in this environment (e.g. TensorRT
+on the plain Windows CPU venv) -- not a failure. FAIL means something that
+should have worked didn't.
 
 Usage:
     python scripts/verify.py

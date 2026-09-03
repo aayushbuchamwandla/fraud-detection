@@ -1,11 +1,9 @@
 """
 PyTorch model for tabular credit-card transaction fraud classification.
 
-Deliberately simple: this project's engineering focus is the inference
-pipeline (CPU -> GPU -> CUDA -> C++ -> TensorRT), not squeezing out extra
-accuracy points with a bigger network. A small MLP is appropriate for 29
-tabular features and keeps every downstream phase (CUDA kernel, C++ port,
-TensorRT export) tractable to implement and reason about correctly.
+Kept intentionally small (29 tabular features, two hidden layers) rather
+than tuned for maximum accuracy -- a larger network would add complexity
+to the CUDA kernel, C++ port, and TensorRT export without a clear benefit.
 """
 
 from __future__ import annotations

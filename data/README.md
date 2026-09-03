@@ -22,7 +22,7 @@ If OpenML is unreachable, download `creditcard.csv` manually from the Kaggle lin
 python scripts/inspect_dataset.py
 ```
 
-### Actual measured characteristics (run 2026-08-20)
+### Measured characteristics (run 2026-08-20)
 
 | Metric | Value |
 |---|---|

@@ -1,18 +1,12 @@
 """
-One-command terminal demo: verifies the GPU, loads the real trained model,
-loads real labeled transactions, and runs actual inference through every
-backend available in the CURRENT environment -- printing real predictions,
-real probabilities, and real measured latency. Nothing here is hardcoded;
-which backends run depends on what's actually importable right now (see
-scripts/check_environment.py for the same detection logic).
+Terminal demo: loads the trained model and labeled sample transactions,
+then runs inference through every backend available in the current
+environment. Which backends run depends on what's importable right now
+(see scripts/check_environment.py for the same detection logic).
 
-The output is built around the backend-vs-backend latency comparison, not
-a single endpoint call -- each transaction prints every available backend
-ranked fastest-to-slowest with a text bar chart, and the run ends with an
-aggregate mean-latency summary across all transactions. This is the
-project's actual differentiator (CPU vs GPU vs custom CUDA kernel vs C++
-vs TensorRT on identical inputs) and is meant to be the visual centerpiece
-of a recorded demo, not an afterthought below a REST API call.
+For each transaction, every available backend is printed ranked
+fastest-to-slowest with a latency bar, followed by an aggregate
+mean-latency summary across all transactions.
 
 Usage:
     python scripts/demo.py
@@ -130,13 +124,10 @@ def main() -> None:
     backends = get_backends()
     print(f"Inference engines available in this environment: {list(backends.keys())}")
 
-    # One warm-up call per backend before showing any numbers -- the first
-    # GPU call absorbs one-time CUDA context/cuDNN algorithm-search cost
-    # (measured here: pytorch_gpu's cold-start was ~4.6 SECONDS on this
-    # machine), which is a real but misleading number to display as "the
-    # model's latency". Every formal benchmark in this project warms up
-    # first (see src/inference/benchmark.py); this demo does the same for
-    # consistency, not to hide a real result.
+    # One warm-up call per backend before timing anything -- the first GPU
+    # call pays one-time CUDA context / cuDNN algorithm-search cost
+    # (measured here: ~4.6s cold-start for pytorch_gpu), which would
+    # otherwise dominate the first transaction's latency number.
     warmup_sample = samples[0]["features"]
     for name, predictor in backends.items():
         predict_one(name, predictor, warmup_sample)
@@ -153,10 +144,8 @@ def main() -> None:
             per_backend_results.append((name, prob, is_fraud, latency_ms))
             all_latencies[name].append(latency_ms)
 
-        # Print ranked fastest -> slowest for THIS transaction, with a text
-        # bar so the latency spread across backends is visible at a glance
-        # -- this comparison, not the single-endpoint prediction, is the
-        # actual engineering story of this project.
+        # Rank fastest -> slowest for this transaction, with a bar chart
+        # showing the latency spread across backends.
         max_latency = max(r[3] for r in per_backend_results)
         for rank, (name, prob, is_fraud, latency_ms) in enumerate(
             sorted(per_backend_results, key=lambda r: r[3]), start=1
@@ -169,9 +158,7 @@ def main() -> None:
                 f"{pred_str:12s} p={prob:.4f}  ({correct})"
             )
 
-    # Aggregate summary across all transactions -- the number that actually
-    # matters for "which backend is fastest," not any single transaction's
-    # result, which can be noisy.
+    # Mean across all transactions is less noisy than any single result.
     print("\n" + "=" * 60)
     print("SUMMARY: mean latency per backend, across all transactions above")
     print("=" * 60)

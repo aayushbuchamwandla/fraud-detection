@@ -1,8 +1,6 @@
 """
-Generates a combined markdown benchmark table from the actual JSON results
--- this is also a cross-check on every hand-copied number in the README:
-regenerating this table and diffing it against what's in the README is how
-you'd catch a transcription error, not just trust that copy-paste went fine.
+Generates a combined markdown benchmark table from the JSON results in
+benchmarks/results/.
 
 Usage:
     python benchmarks/generate_summary.py

@@ -1,12 +1,10 @@
 // C++ inference component for the fraud detection model.
 //
-// This is a real inference engine, not a wrapper that shells out to Python:
-// it owns persistent GPU device buffers for the model weights (uploaded
-// once at construction, not per call) and reuses input/output device
-// buffers across calls, growing them only when a larger batch is requested.
-// That's a genuine difference from the PyTorch extension path in Phase 6,
-// which re-wraps a torch::Tensor (with its own allocator bookkeeping) on
-// every predict() call.
+// Owns persistent GPU device buffers for the model weights (uploaded once
+// at construction, not per call) and reuses input/output device buffers
+// across calls, growing them only when a larger batch is requested. The
+// PyTorch extension path in cuda/ (Phase 6) instead re-wraps a
+// torch::Tensor, with its own allocator bookkeeping, on every predict() call.
 #pragma once
 
 #include <stdexcept>

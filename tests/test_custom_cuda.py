@@ -80,10 +80,10 @@ def test_probability_in_valid_range(custom_predictor):
 
 @pytest.mark.parametrize("batch_size", [1, 32, 128, 512, 1024])
 def test_matches_cpu_reference_numerically(custom_predictor, cpu_model, batch_size):
-    """The core correctness check: the custom CUDA kernel's output must match
-    a plain PyTorch CPU forward pass on identical weights/inputs, within
-    float32 tolerance -- mirrors cuda/kernel_correctness_test.cu's check,
-    exercised here through the actual Python inference path.
+    """The custom CUDA kernel's output must match a plain PyTorch CPU forward
+    pass on identical weights/inputs, within float32 tolerance -- mirrors
+    cuda/kernel_correctness_test.cu's check, exercised here through the
+    Python inference path.
     """
     torch.manual_seed(42)
     x = torch.randn(batch_size, custom_predictor.input_dim)

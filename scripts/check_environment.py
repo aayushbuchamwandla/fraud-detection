@@ -1,9 +1,7 @@
 """
-Reports the actual state of the current environment -- every line here is
-either a subprocess call to a real tool or a real Python import check.
-Nothing is hardcoded, so this script's output differs depending on which of
-this project's three environments (.venv, .venv-gpu, WSL2 ~/venv-cuda) it's
-run from, which is the point: it tells you what's really available right now.
+Reports GPU/CUDA/TensorRT/compiler/Docker availability in the current
+environment via subprocess calls and imports. Output differs across this
+project's three environments (.venv, .venv-gpu, WSL2 ~/venv-cuda).
 
 Usage:
     python scripts/check_environment.py
@@ -52,15 +50,12 @@ def check_torch() -> dict:
 
 
 def check_tensorrt() -> dict:
-    # NOTE: this project has its OWN tensorrt/ directory at the repo root
-    # (see tensorrt/export_model.py etc.), which Python 3's implicit
-    # namespace-package mechanism (PEP 420) will happily "import" even when
-    # the real NVIDIA tensorrt pip package isn't installed -- find_spec()
-    # alone returns a truthy spec either way. The discriminator is
-    # tensorrt.__file__: the real package has one (points into
-    # site-packages), a namespace package's is None. Confirmed by testing:
-    # `import tensorrt; tensorrt.__file__` -> None in an environment with
-    # no real tensorrt installed but this project's directory on sys.path.
+    # This project has its own tensorrt/ directory at the repo root, which
+    # Python's implicit namespace-package mechanism (PEP 420) will import
+    # even when the real NVIDIA tensorrt package isn't installed --
+    # find_spec() alone returns a truthy spec either way. tensorrt.__file__
+    # distinguishes them: the real package has one, a namespace package's
+    # is None.
     try:
         import tensorrt as trt
     except ImportError:

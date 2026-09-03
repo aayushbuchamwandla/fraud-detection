@@ -1,17 +1,14 @@
 """
 FastAPI inference service.
 
-Engine selection: defaults to CPU, not because it's the simplest option but
-because every benchmark from Phase 3 onward measured CPU as the FASTEST
-backend at batch_size=1 (0.070ms vs 0.091-0.239ms for every GPU path -- see
-README/benchmarks/results/), and a REST API's /predict endpoint serves one
-transaction at a time. Defaulting to the "most advanced" available engine
-would contradict this project's own measurements. Other engines remain
-selectable (FRAUD_API_ENGINE env var) for demonstration/benchmarking.
+Engine selection defaults to CPU: benchmarks in benchmarks/results/ show
+CPU as the fastest backend at batch_size=1 (0.070ms vs 0.091-0.239ms for
+the GPU paths), and /predict serves one transaction per request. Other
+engines are selectable via the FRAUD_API_ENGINE env var.
 
 Endpoints:
-    GET  /health   -- liveness + which engine is actually loaded
-    POST /predict   -- run inference on one transaction's features
+    GET  /health   -- liveness + which engine is loaded
+    POST /predict  -- run inference on one transaction's features
 """
 
 from __future__ import annotations
@@ -71,11 +68,9 @@ class SampleTransaction(BaseModel):
 
 
 def _load_sample_transactions() -> list[SampleTransaction]:
-    """Reads the REAL held-out test-split transactions exported by
-    scripts/export_sample_transactions.py (see Phase 7) -- the web frontend's
-    "Load Legitimate/Fraud Example" buttons call this via GET /samples rather
-    than embedding fixture data client-side, so even the example values shown
-    are round-tripped through the real backend.
+    """Reads the held-out test-split transactions exported by
+    scripts/export_sample_transactions.py. The frontend's "Load Example"
+    buttons call this endpoint rather than embedding fixture data client-side.
     """
     if not SAMPLES_PATH.exists():
         return []
@@ -184,9 +179,8 @@ def create_app() -> FastAPI:
     def value_error_handler(request, exc: ValueError):  # noqa: ANN001
         return JSONResponse(status_code=422, content={"detail": str(exc)})
 
-    # Serve the web demo frontend (frontend/index.html + assets) as static
-    # files at "/". It calls /health, /samples, and /predict via fetch() --
-    # no prediction values are computed or hardcoded client-side.
+    # Serve the frontend (frontend/index.html + assets) at "/". Mounted last
+    # so it doesn't shadow the routes registered above.
     if FRONTEND_DIR.exists():
         app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 

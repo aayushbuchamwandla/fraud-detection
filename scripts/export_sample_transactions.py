@@ -1,9 +1,7 @@
 """
-Export a small, fixed set of real transactions (with true labels) from the
-held-out test split, for use as consistent demonstration/test fixtures
-across the C++ demo, terminal demo, API tests, and web demo -- so every
-"here's a legitimate/fraudulent example" shown anywhere in this project
-traces back to the same real, labeled data instead of invented values.
+Export a small, fixed set of transactions (with true labels) from the
+held-out test split, used as fixtures by the C++ demo, terminal demo, API
+tests, and web demo.
 
 Usage:
     python scripts/export_sample_transactions.py

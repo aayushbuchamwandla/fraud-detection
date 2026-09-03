@@ -1,6 +1,6 @@
 # Phase 5: Pipeline Bottleneck Analysis
 
-Phase 4 found that PyTorch CUDA inference is 1.7x-3.4x *slower* than CPU at every tested batch size for this model. Before writing a custom CUDA kernel to "fix" that, this phase measures **where the GPU pipeline actually spends its time**, so any optimization targets a real, measured bottleneck rather than a guess.
+Phase 4 found that PyTorch CUDA inference is 1.7x-3.4x slower than CPU at every tested batch size for this model. Before writing a custom CUDA kernel, this phase measures where the GPU pipeline spends its time, so the optimization targets a measured bottleneck rather than a guess.
 
 ## Method
 
@@ -37,8 +37,8 @@ The reason: `FraudMLP.forward()` is `Linear -> ReLU -> Linear -> ReLU -> Linear`
 
 The H2D/D2H transfer stages show the same flat-with-batch-size pattern (10-14% and 9-10%) for the same underlying reason: at these data sizes (29 floats x batch_size), transfer time is dominated by the fixed per-`cudaMemcpy` launch cost, not by PCIe bandwidth (nowhere near saturated by a few KB).
 
-## Conclusion: what's actually worth optimizing
+## Conclusion
 
-**Kernel launch overhead in `gpu_compute`, not the arithmetic itself, is the real bottleneck** — and it's the one piece of this pipeline a custom CUDA kernel can directly address: fusing the three-layer MLP forward pass (`linear -> relu -> linear -> relu -> linear -> sigmoid`) into a single custom kernel replaces ~6 kernel launches with 1, eliminating roughly 5/6 of the dispatch overhead that Phase 5 measured as ~70% of total pipeline time.
+**Kernel launch overhead in `gpu_compute`, not the arithmetic itself, is the bottleneck** — and it's the piece of this pipeline a custom CUDA kernel can address directly: fusing the three-layer MLP forward pass (`linear -> relu -> linear -> relu -> linear -> sigmoid`) into a single kernel replaces ~6 kernel launches with 1, eliminating roughly 5/6 of the dispatch overhead measured above as ~70% of total pipeline time.
 
-This is stated as the target for Phase 6, not as a result — whether a fused kernel actually beats PyTorch's dispatch here (and whether the resulting GPU path finally beats the CPU baseline) is a benchmark question the next phase answers, not an assumption this one makes.
+Whether the fused kernel beats PyTorch's dispatch, and whether the resulting GPU path beats the CPU baseline, is measured in Phase 6.

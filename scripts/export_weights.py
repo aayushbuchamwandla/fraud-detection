@@ -3,8 +3,7 @@ Export the trained FraudMLP's weights as raw float32 binary files.
 
 Used by the standalone C++/CUDA build (cuda/, cpp/) so those components don't
 need to link against libtorch just to read a checkpoint -- they read flat
-binary arrays instead, which is both simpler and closer to a real embedded/
-inference-service deployment.
+binary arrays instead.
 
 Usage:
     python scripts/export_weights.py

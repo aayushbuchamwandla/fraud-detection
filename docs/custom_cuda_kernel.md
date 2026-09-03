@@ -37,8 +37,8 @@ Same batch sizes, warm-up (20 iters), and measurement count (200 iters) as the C
 | 512 | 0.138 ms | 0.238 ms | 0.110 ms | **2.2x faster** | **1.3x faster** |
 | 1024 | 0.161 ms | 0.274 ms | 0.118 ms | **2.3x faster** | **1.4x faster** |
 
-Raw data: `benchmarks/results/custom_cuda_results.json`. Standalone (no-PyTorch) device-only kernel timing from `kernel_correctness_test.cu`: **0.030 ms/call at batch=1024**, vs Phase 5's measured `gpu_compute` stage of 0.231ms for the same batch size — consistent with launch-overhead elimination being the actual mechanism, not a different one.
+Raw data: `benchmarks/results/custom_cuda_results.json`. Standalone (no-PyTorch) device-only kernel timing from `kernel_correctness_test.cu`: **0.030 ms/call at batch=1024**, vs Phase 5's measured `gpu_compute` stage of 0.231ms for the same batch size — consistent with launch-overhead elimination as the cause.
 
-## Honest conclusion
+## Conclusion
 
-**The optimization worked against the target it was built for** (PyTorch's own GPU dispatch: 2.2x-2.6x faster at every batch size, confirming Phase 5's diagnosis was correct) **but did not uniformly beat the CPU baseline.** There's a real crossover: CPU still wins at batch sizes 1-128, the custom kernel wins at 512-1024. This is reported as measured, not rounded up to "GPU wins" or explained away — a 4,033-parameter model's CPU inference is fast enough that beating it requires the batch to be large enough to amortize the GPU's fixed per-call overhead (H2D/D2H transfer, kernel launch, Python/PyTorch dispatch into the extension), which the fused kernel reduced substantially but did not eliminate entirely.
+The kernel is 2.2x-2.6x faster than PyTorch's own GPU dispatch at every batch size, confirming Phase 5's diagnosis. It does not uniformly beat the CPU baseline: CPU wins at batch sizes 1-128, the custom kernel wins at 512-1024. A 4,033-parameter model's CPU inference is fast enough that beating it requires a batch large enough to amortize the GPU's fixed per-call overhead (H2D/D2H transfer, kernel launch, Python/PyTorch dispatch into the extension), which the fused kernel reduced but did not eliminate.

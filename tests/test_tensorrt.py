@@ -1,12 +1,12 @@
 """
 Correctness tests for the TensorRT engine (tensorrt/inference.py).
 
-Loaded by explicit file path (importlib), NOT `from tensorrt.inference import
-...` -- this project's tensorrt/ directory shares its name with the actual
+Loaded by explicit file path (importlib), not `from tensorrt.inference
+import ...` -- this project's tensorrt/ directory shares its name with the
 pip-installed `tensorrt` package, and importing it as a dotted package name
 while the project root is also on sys.path risks Python resolving `import
-tensorrt` (inside inference.py itself) to the wrong thing. Loading by file
-path sidesteps the ambiguity entirely.
+tensorrt` (inside inference.py itself) to the wrong module. Loading by file
+path avoids the ambiguity.
 
 Requires CUDA + TensorRT + pycuda in the WSL2 ~/venv-cuda environment.
 Skips cleanly when unavailable, same policy as the other GPU test files.
@@ -104,10 +104,9 @@ def test_matches_cpu_reference_numerically(predictor, cpu_model, batch_size):
     (more reduction steps -> more opportunity for reordering). Measured on
     this model: max absolute difference ~7e-4 at batch=1024 (see
     docs/tensorrt.md), which is far too small to ever flip a classification
-    decision. atol=1e-3 was chosen to comfortably clear that measured
-    difference while still catching a genuinely wrong engine (e.g. a
-    transposed weight matrix would produce differences orders of magnitude
-    larger than this).
+    decision. atol=1e-3 was chosen to clear that measured difference while
+    still catching an incorrect engine (e.g. a transposed weight matrix
+    would produce differences orders of magnitude larger than this).
     """
     import numpy as np
     import torch
@@ -131,7 +130,7 @@ def test_predict_single_returns_plain_python_types(predictor):
 
 
 def test_real_sample_transactions_classified_correctly(predictor):
-    """Uses the same real, labeled fixtures as the C++ demo/tests (Phase 7)."""
+    """Uses the same labeled fixtures as the C++ demo/tests (Phase 7)."""
     import csv
 
     import numpy as np

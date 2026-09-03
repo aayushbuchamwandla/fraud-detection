@@ -1,11 +1,10 @@
 """
-Phase 12: generate benchmark comparison plots from the ACTUAL JSON results
-already collected in benchmarks/results/ -- every number plotted here comes
-from a real benchmark run (Phases 3/4/6/7/8), nothing is typed in by hand.
+Phase 12: generate benchmark comparison plots from the JSON results in
+benchmarks/results/ (produced by the benchmark_*.py scripts in Phases
+3/4/6/7/8).
 
-Color: each implementation gets one fixed hue, in the same order across
-every chart in this script (color follows the entity, not its rank) --
-categorical palette validated colorblind-safe (see the dataviz skill's
+Each implementation gets one fixed hue, in the same order across every
+chart -- a colorblind-safe categorical palette (see the dataviz skill's
 references/palette.md).
 
 Usage:

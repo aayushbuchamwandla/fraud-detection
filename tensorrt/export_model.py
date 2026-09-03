@@ -30,9 +30,9 @@ class FraudMLPWithSigmoid(torch.nn.Module):
     """Wraps FraudMLP to output a probability, not a raw logit.
 
     FraudMLP.forward() intentionally returns logits (for BCEWithLogitsLoss
-    during training -- see src/models/model.py). Every OTHER inference
-    backend in this project (CPU, PyTorch GPU, custom CUDA kernel, C++)
-    applies sigmoid as an explicit separate step in its predict() wrapper.
+    during training -- see src/models/model.py). Every other inference
+    backend (CPU, PyTorch GPU, custom CUDA kernel, C++) applies sigmoid as
+    an explicit separate step in its predict() wrapper.
     For ONNX/TensorRT, baking sigmoid into the exported graph keeps the
     engine's output directly comparable/pluggable the same way, and lets
     TensorRT fuse it into the same kernel as the final Linear layer.

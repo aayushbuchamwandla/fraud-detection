@@ -1,13 +1,11 @@
 """
-Phase 5: stage-by-stage bottleneck analysis of the GPU inference pipeline.
+Phase 5: stage-by-stage profiling of the GPU inference pipeline.
 
 Phase 4 found the GPU slower than CPU at every batch size for this model.
-Rather than guess why and write a CUDA kernel to fix the guess, this script
-times each stage of the actual pipeline separately:
+This script times each pipeline stage separately to identify where the time
+actually goes before optimizing anything:
 
     host tensor prep -> H2D transfer -> GPU compute -> D2H transfer -> postprocess
-
-so the real bottleneck (if any) is identified from measurement, not assumption.
 
 Must be run with the .venv-gpu interpreter (torch==1.12.1+cu113):
     .venv-gpu\\Scripts\\python.exe benchmarks\\profile_pipeline.py

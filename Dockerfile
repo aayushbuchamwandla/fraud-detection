@@ -21,9 +21,9 @@ RUN pip install --no-cache-dir fastapi "uvicorn[standard]"
 COPY src/ src/
 COPY frontend/ frontend/
 
-# Real sample transactions for the GET /samples endpoint (used by the
-# frontend's "Load Example" buttons) -- without this the endpoint returns
-# an empty list and the demo buttons silently have nothing to load.
+# Sample transactions for the GET /samples endpoint (used by the frontend's
+# "Load Example" buttons) -- without this the endpoint returns an empty
+# list and the demo buttons have nothing to load.
 COPY data/samples/ data/samples/
 
 # Trained model checkpoint -- NOT committed to git (see .gitignore), so this

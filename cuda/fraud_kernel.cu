@@ -3,10 +3,9 @@
 // One CUDA thread per transaction: each thread independently computes the
 // entire 3-layer forward pass for its sample (~3,936 multiply-adds total --
 // trivial per-thread work), so parallelism comes from the batch dimension,
-// not from splitting a single sample's matmul across threads. This is the
-// right granularity here because the whole point (see
-// docs/bottleneck_analysis.md) is eliminating per-layer KERNEL LAUNCH
-// overhead, not speeding up an individual matmul that's already tiny.
+// not from splitting a single sample's matmul across threads. The target
+// here (see docs/bottleneck_analysis.md) is eliminating per-layer kernel
+// launch overhead, not speeding up an individual matmul that's already tiny.
 //
 // Weight matrices are small enough (64x29, 32x64, 32x1 floats) that every
 // thread re-reads them from global memory; L2 cache handles this well since

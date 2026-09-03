@@ -8,7 +8,7 @@ Not a production system: single-machine, single-GPU, no live transaction data, n
 
 ## Demo
 
-[![Demo video](assets/media/demo-thumbnail.jpg)](https://github.com/aayushbuchamwandla/fraud-detection/releases/download/demo-v1/demo.mp4)
+[![Demo video](assets/media/demo-thumbnail.jpg)](https://youtu.be/8ZWyYUT7CHk)
 
 Click the image to watch the full walkthrough (CPU vs GPU vs custom CUDA vs TensorRT latency comparison, end to end).
 

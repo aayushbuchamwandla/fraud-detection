@@ -6,6 +6,12 @@ Not a production system: single-machine, single-GPU, no live transaction data, n
 
 **Status: all 15 phases complete**, plus a web demo frontend, terminal demo/environment-check/verification scripts, and auto-generated benchmark plots.
 
+## Demo
+
+[![Demo video](assets/media/demo-thumbnail.jpg)](assets/media/demo.mp4)
+
+Click the image to watch the full walkthrough (CPU vs GPU vs custom CUDA vs TensorRT latency comparison, end to end).
+
 ## Hardware / software environment
 
 | | |
